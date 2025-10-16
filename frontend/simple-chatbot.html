@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Customer Service</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #f5f7fa;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .chat-container {
+        width: 100%;
+        max-width: 400px;
+        background-color: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+      }
+
+      .chat-header {
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .chat-header h1 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .chat-header p {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .message {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        line-height: 1.4;
+        font-size: 0.95rem;
+      }
+
+      .bot-message {
+        align-self: flex-start;
+        background-color: #f0f2f5;
+        color: #333;
+        border-bottom-left-radius: 4px;
+      }
+
+      .user-message {
+        align-self: flex-end;
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+
+      .quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .quick-action {
+        background-color: #e9ecef;
+        border: none;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .quick-action:hover {
+        background-color: #dee2e6;
+        transform: translateY(-2px);
+      }
+
+      .chat-input-area {
+        padding: 15px;
+        border-top: 1px solid #e9ecef;
+        display: flex;
+        gap: 10px;
+      }
+
+      .chat-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 24px;
+        font-size: 0.95rem;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .chat-input:focus {
+        border-color: #6a11cb;
+      }
+
+      .send-button {
+        background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .send-button:hover {
+        transform: scale(1.05);
+      }
+
+      .suggestion-text {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      @media (max-width: 480px) {
+        .chat-container {
+          height: 100vh;
+          border-radius: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">
+        <h1>Welcome to AI Customer Service</h1>
+        <p>Hello! I'm your AI assistant. How can I help you today?</p>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">
+          Hi there! What can I help you with?
+        </div>
+        <div class="quick-actions">
+          <button class="quick-action" data-action="shipping">Shipping</button>
+          <button class="quick-action" data-action="returns">Returns</button>
+          <button class="quick-action" data-action="payment">Payment</button>
+          <button class="quick-action" data-action="contact">Contact</button>
+        </div>
+        <div class="suggestion-text">
+          Try: shipping, returns, payment, contact
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <input
+          type="text"
+          class="chat-input"
+          id="chatInput"
+          placeholder="Ask about products, shipping, returns..."
+        />
+        <button class="send-button" id="sendButton">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const chatMessages = document.getElementById("chatMessages");
+        const chatInput = document.getElementById("chatInput");
+        const sendButton = document.getElementById("sendButton");
+        const quickActions = document.querySelectorAll(".quick-action");
+
+        // Function to add a message to the chat
+        function addMessage(text, isUser) {
+          const messageDiv = document.createElement("div");
+          messageDiv.classList.add("message");
+          messageDiv.classList.add(isUser ? "user-message" : "bot-message");
+          messageDiv.textContent = text;
+          chatMessages.appendChild(messageDiv);
+
+          // Scroll to the bottom
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to handle sending a message
+        function sendMessage() {
+          const message = chatInput.value.trim();
+          if (message) {
+            addMessage(message, true);
+            chatInput.value = "";
+
+            // Simulate bot response after a short delay
+            setTimeout(() => {
+              let response;
+              if (message.toLowerCase().includes("shipping")) {
+                response =
+                  "Our standard shipping takes 3-5 business days. Express shipping is available for an additional fee.";
+              } else if (message.toLowerCase().includes("return")) {
+                response =
+                  "You can return items within 30 days of purchase. Please have your order number ready.";
+              } else if (message.toLowerCase().includes("payment")) {
+                response =
+                  "We accept all major credit cards, PayPal, and Apple Pay.";
+              } else if (message.toLowerCase().includes("contact")) {
+                response =
+                  "You can reach our support team at support@example.com or call 1-800-123-4567.";
+              } else {
+                response =
+                  "I'm not sure I understand. Can you try asking about shipping, returns, payment, or contact information?";
+              }
+
+              addMessage(response, false);
+            }, 1000);
+          }
+        }
+
+        // Event listeners
+        sendButton.addEventListener("click", sendMessage);
+
+        chatInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            sendMessage();
+          }
+        });
+
+        quickActions.forEach((button) => {
+          button.addEventListener("click", function () {
+            const action = this.getAttribute("data-action");
+            chatInput.value = action;
+            sendMessage();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

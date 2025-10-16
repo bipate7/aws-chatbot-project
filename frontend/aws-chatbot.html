@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>AWS-Powered AI Customer Service</title>
+    <style>
+      :root {
+        --primary: #007bff;
+        --aws-orange: #ff9900;
+        --success: #28a745;
+        --danger: #dc3545;
+        --dark: #343a40;
+        --light: #f8f9fa;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+
+      .container {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        height: 85vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f0f0;
+      }
+
+      .aws-badge {
+        background: var(--aws-orange);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+        margin-left: 15px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .chat-area {
+        flex: 1;
+        border: 2px solid #e0e0e0;
+        border-radius: 15px;
+        padding: 20px;
+        overflow-y: auto;
+        background: var(--light);
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .message {
+        padding: 15px 20px;
+        border-radius: 20px;
+        max-width: 80%;
+        word-wrap: break-word;
+        animation: slideIn 0.3s ease-out;
+        position: relative;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .user-message {
+        background: var(--primary);
+        color: white;
+        margin-left: auto;
+        text-align: right;
+        border-bottom-right-radius: 5px;
+      }
+
+      .bot-message {
+        background: #e3f2fd;
+        color: #1565c0;
+        margin-right: auto;
+        border: 1px solid #bbdefb;
+        border-bottom-left-radius: 5px;
+      }
+
+      .aws-message {
+        background: #fff4e6;
+        color: #cc6a00;
+        border: 1px solid var(--aws-orange);
+        font-size: 0.9em;
+        max-width: 60%;
+        margin: 5px auto;
+      }
+
+      .system-message {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 1px dashed #dee2e6;
+        text-align: center;
+        max-width: 70%;
+        margin: 10px auto;
+        font-style: italic;
+      }
+
+      .input-area {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        background: white;
+        padding: 15px;
+        border-radius: 25px;
+        border: 2px solid #e0e0e0;
+        transition: border-color 0.3s;
+      }
+
+      .input-area:focus-within {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+      }
+
+      #userInput {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 20px;
+        font-size: 16px;
+        outline: none;
+        background: transparent;
+      }
+
+      button {
+        background: linear-gradient(135deg, var(--primary), #0056b3);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+      }
+
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 15px 0;
+        justify-content: center;
+      }
+
+      .suggestion {
+        background: white;
+        border: 2px solid var(--primary);
+        border-radius: 20px;
+        padding: 10px 20px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+        color: var(--primary);
+        font-weight: 500;
+      }
+
+      .suggestion:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+      }
+
+      .aws-suggestion {
+        border-color: var(--aws-orange);
+        color: var(--aws-orange);
+      }
+
+      .aws-suggestion:hover {
+        background: var(--aws-orange);
+        color: white;
+      }
+
+      .typing {
+        font-style: italic;
+        color: #6c757d;
+        text-align: center;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .typing-dots {
+        display: flex;
+        gap: 4px;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #6c757d;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+        }
+        30% {
+          transform: translateY(-10px);
+        }
+      }
+
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-top: 1px solid #e0e0e0;
+        margin-top: 10px;
+      }
+
+      .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      .connected-dot {
+        background: var(--success);
+      }
+
+      .disconnected-dot {
+        background: var(--danger);
+      }
+
+      .metrics {
+        display: flex;
+        gap: 15px;
+        font-size: 12px;
+        color: #6c757d;
+      }
+
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .clear-btn {
+        background: transparent;
+        color: #6c757d;
+        border: 1px solid #6c757d;
+        padding: 8px 15px;
+        font-size: 12px;
+      }
+
+      .clear-btn:hover {
+        background: #6c757d;
+        color: white;
+      }
+
+      .welcome-modal {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        z-index: 1000;
+        max-width: 400px;
+        width: 90%;
+      }
+
+      .modal-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+      }
+
+      .feature-list {
+        text-align: left;
+        margin: 20px 0;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 10px 0;
+        color: #495057;
+      }
+
+      .timestamp {
+        font-size: 0.7em;
+        opacity: 0.7;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Welcome Modal -->
+      <div id="welcomeModal" class="welcome-modal">
+        <h2>🚀 Welcome to AWS AI Chatbot</h2>
+        <p>Your cloud-powered customer service assistant</p>
+
+        <div class="feature-list">
+          <div class="feature-item">✅ Real AWS Lambda Integration</div>
+          <div class="feature-item">✅ Live Connection Monitoring</div>
+          <div class="feature-item">✅ Conversation History</div>
+          <div class="feature-item">✅ Performance Metrics</div>
+          <div class="feature-item">✅ Smart Local Fallback</div>
+        </div>
+
+        <button
+          onclick="closeWelcomeModal()"
+          style="width: 100%; margin-top: 20px"
+        >
+          Get Started
+        </button>
+      </div>
+
+      <div class="header">
+        <h1>
+          🤖 AI Customer Service Assistant
+          <span class="aws-badge">AWS Powered</span>
+        </h1>
+        <p>Enterprise-grade chatbot powered by Amazon Web Services</p>
+      </div>
+
+      <div class="chat-area" id="chatArea">
+        <div class="system-message">🔄 Testing AWS Lambda connection...</div>
+      </div>
+
+      <div class="suggestions">
+        <div
+          class="suggestion"
+          onclick="askQuestion('What are your shipping policies?')"
+        >
+          🚚 Shipping Info
+        </div>
+        <div
+          class="suggestion"
+          onclick="askQuestion('How do I return an item?')"
+        >
+          📦 Returns
+        </div>
+        <div
+          class="suggestion aws-suggestion"
+          onclick="askQuestion('Tell me about AWS services')"
+        >
+          ☁️ AWS Services
+        </div>
+        <div
+          class="suggestion"
+          onclick="askQuestion('What payment methods do you accept?')"
+        >
+          💳 Payments
+        </div>
+        <div
+          class="suggestion"
+          onclick="askQuestion('What are your business hours?')"
+        >
+          🕒 Hours
+        </div>
+        <div
+          class="suggestion aws-suggestion"
+          onclick="askQuestion('Show performance metrics')"
+        >
+          📊 Metrics
+        </div>
+      </div>
+
+      <div class="input-area">
+        <input
+          type="text"
+          id="userInput"
+          placeholder="Ask about shipping, returns, AWS, or anything else..."
+          autocomplete="off"
+        />
+        <button onclick="sendMessage()" id="sendButton">
+          <span>📨</span> Send to AWS
+        </button>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-indicator">
+          <div id="statusDot" class="status-dot disconnected-dot"></div>
+          <span id="statusText">Connecting to AWS...</span>
+        </div>
+
+        <div class="metrics">
+          <div class="metric" id="responseTime">⏱️ -- ms</div>
+          <div class="metric" id="messageCount">💬 0</div>
+          <div class="metric" id="confidenceScore">🎯 --%</div>
+        </div>
+
+        <button class="clear-btn" onclick="clearChat()">🗑️ Clear Chat</button>
+      </div>
+    </div>
+
+    <script>
+      // Configuration
+      const AWS_API_URL =
+        "https://ajo8nndd4c.execute-api.us-east-1.amazonaws.com/prod/chat";
+      let isConnected = false;
+      let messageCount = 0;
+      let conversationHistory = [];
+
+      // Initialize on load
+      window.onload = function () {
+        document.getElementById("userInput").focus();
+        testAWSConnection();
+        loadConversationHistory();
+      };
+
+      // Enhanced AWS Connection Test
+      async function testAWSConnection() {
+        const statusDot = document.getElementById("statusDot");
+        const statusText = document.getElementById("statusText");
+
+        try {
+          statusText.textContent = "🟡 Testing AWS connection...";
+
+          const startTime = Date.now();
+          const response = await fetch(AWS_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: "connection_test" }),
+          });
+
+          const responseTime = Date.now() - startTime;
+
+          if (response.ok) {
+            const data = await response.json();
+            isConnected = true;
+            statusDot.className = "status-dot connected-dot";
+            statusText.textContent = `🟢 Connected to AWS Lambda (${responseTime}ms)`;
+
+            addSystemMessage(
+              "✅ Successfully connected to AWS Lambda! Cloud services are ready."
+            );
+            updateMetric("responseTime", `${responseTime}ms`);
+          } else {
+            throw new Error(`HTTP ${response.status}`);
+          }
+        } catch (error) {
+          console.warn("AWS connection failed, using local mode:", error);
+          isConnected = false;
+          statusDot.className = "status-dot disconnected-dot";
+          statusText.textContent = "🔴 Local Mode (AWS unavailable)";
+
+          addSystemMessage(
+            "⚠️ Running in local mode. Some features may be limited."
+          );
+        }
+      }
+
+      // Enhanced Message Sending with Analytics
+      async function sendMessage() {
+        const userInput = document.getElementById("userInput");
+        const message = userInput.value.trim();
+        const sendButton = document.getElementById("sendButton");
+
+        if (!message) return;
+
+        // Disable button during processing
+        sendButton.disabled = true;
+        sendButton.innerHTML = "<span>⏳</span> Processing...";
+
+        // Add user message
+        addMessage(message, "user");
+        userInput.value = "";
+        messageCount++;
+        updateMetric("messageCount", messageCount);
+
+        // Show enhanced typing indicator
+        showTyping();
+
+        try {
+          const startTime = Date.now();
+          let response;
+
+          if (isConnected) {
+            // Send to AWS Lambda with enhanced payload
+            response = await fetch(AWS_API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                message: message,
+                timestamp: new Date().toISOString(),
+                source: "web_chat",
+              }),
+            });
+
+            if (!response.ok) throw new Error(`AWS error: ${response.status}`);
+
+            const data = await response.json();
+            const responseTime = Date.now() - startTime;
+
+            hideTyping();
+            addMessage(data.message, "bot");
+
+            // Add AWS metadata
+            addMessage(
+              `☁️ AWS Lambda | Confidence: ${data.confidence}% | Response: ${responseTime}ms`,
+              "aws"
+            );
+
+            // Update metrics
+            updateMetric("responseTime", `${responseTime}ms`);
+            updateMetric("confidenceScore", `${data.confidence}%`);
+
+            // Store in conversation history
+            conversationHistory.push({
+              user: message,
+              bot: data.message,
+              timestamp: new Date().toISOString(),
+              responseTime: responseTime,
+              confidence: data.confidence,
+            });
+            saveConversationHistory();
+          } else {
+            // Enhanced local fallback
+            setTimeout(() => {
+              hideTyping();
+              const localResponse = getEnhancedLocalResponse(message);
+              addMessage(localResponse, "bot");
+              addMessage(
+                "🔧 Local AI Mode | Connect to AWS for cloud features",
+                "aws"
+              );
+
+              conversationHistory.push({
+                user: message,
+                bot: localResponse,
+                timestamp: new Date().toISOString(),
+                responseTime: 1000,
+                confidence: 75,
+              });
+              saveConversationHistory();
+            }, 1000);
+          }
+        } catch (error) {
+          hideTyping();
+          addMessage("❌ Connection issue. Using enhanced local mode.", "bot");
+          addMessage(`🔧 ${error.message} | Try reconnecting to AWS`, "aws");
+          console.error("Send message error:", error);
+        } finally {
+          // Re-enable button
+          sendButton.disabled = false;
+          sendButton.innerHTML = "<span>📨</span> Send to AWS";
+        }
+      }
+
+      // Enhanced Local Responses
+      function getEnhancedLocalResponse(message) {
+        const enhancedResponses = {
+          shipping:
+            "🚚 **Premium Shipping**: Free delivery on orders over $50! Express options available. Connect to AWS for real-time tracking.",
+          return:
+            "📦 **Hassle-Free Returns**: 30-day return policy with free return shipping for defective items. AWS-powered processing ensures quick refunds.",
+          payment:
+            "💳 **Secure Payments**: We accept all major cards, PayPal, and digital wallets. AWS security protects your transactions.",
+          aws: "☁️ **AWS Cloud Services**: This chatbot can connect to Amazon Web Services for Lambda compute, DynamoDB storage, and AI/ML capabilities!",
+          metrics:
+            "📊 **Performance Metrics**: Response times, confidence scores, and usage analytics available when connected to AWS cloud services.",
+          hours:
+            "🕒 **24/7 Support**: Available anytime! AWS global infrastructure ensures we're always online.",
+          lambda:
+            "⚡ **AWS Lambda**: Serverless compute service that runs your code without provisioning servers. Perfect for chatbots!",
+          default:
+            "🤖 **Enhanced AI Assistant**: I'm running in local mode with advanced features. Connect me to AWS for real cloud power and AI capabilities!",
+        };
+
+        const lowerMessage = message.toLowerCase();
+        for (const [keyword, response] of Object.entries(enhancedResponses)) {
+          if (lowerMessage.includes(keyword)) {
+            return response;
+          }
+        }
+        return enhancedResponses.default;
+      }
+
+      // UI Management Functions
+      function askQuestion(question) {
+        document.getElementById("userInput").value = question;
+        sendMessage();
+      }
+
+      function addMessage(text, type) {
+        const chatArea = document.getElementById("chatArea");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}-message`;
+        messageDiv.innerHTML = text;
+
+        // Add timestamp for user and bot messages
+        if (type === "user" || type === "bot") {
+          const timestamp = document.createElement("div");
+          timestamp.className = "timestamp";
+          timestamp.textContent = new Date().toLocaleTimeString();
+          messageDiv.appendChild(timestamp);
+        }
+
+        chatArea.appendChild(messageDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function addSystemMessage(text) {
+        const chatArea = document.getElementById("chatArea");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message system-message";
+        messageDiv.textContent = text;
+        chatArea.appendChild(messageDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function showTyping() {
+        const chatArea = document.getElementById("chatArea");
+        const typingDiv = document.createElement("div");
+        typingDiv.id = "typingIndicator";
+        typingDiv.className = "typing";
+        typingDiv.innerHTML = `
+          ${isConnected ? "☁️ AWS Lambda is processing" : "🤖 AI is thinking"}
+          <div class="typing-dots">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+        chatArea.appendChild(typingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function hideTyping() {
+        const typingIndicator = document.getElementById("typingIndicator");
+        if (typingIndicator) typingIndicator.remove();
+      }
+
+      function updateMetric(metricId, value) {
+        const metricElement = document.getElementById(metricId);
+        if (metricElement) {
+          const icon = metricElement.textContent.charAt(0);
+          metricElement.textContent = `${icon} ${value}`;
+        }
+      }
+
+      function clearChat() {
+        const chatArea = document.getElementById("chatArea");
+        chatArea.innerHTML = "";
+        addSystemMessage("💬 Chat cleared. Ready for new conversation.");
+        messageCount = 0;
+        updateMetric("messageCount", 0);
+        updateMetric("responseTime", "-- ms");
+        updateMetric("confidenceScore", "--%");
+      }
+
+      function closeWelcomeModal() {
+        document.getElementById("welcomeModal").style.display = "none";
+      }
+
+      // Conversation History Management
+      function saveConversationHistory() {
+        localStorage.setItem(
+          "chatHistory",
+          JSON.stringify(conversationHistory)
+        );
+      }
+
+      function loadConversationHistory() {
+        const saved = localStorage.getItem("chatHistory");
+        if (saved) {
+          conversationHistory = JSON.parse(saved);
+          messageCount = conversationHistory.length;
+          updateMetric("messageCount", messageCount);
+        }
+      }
+
+      // Enhanced Event Listeners
+      document
+        .getElementById("userInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+
+      // Auto-reconnect feature
+      setInterval(() => {
+        if (!isConnected) {
+          testAWSConnection();
+        }
+      }, 30000); // Try to reconnect every 30 seconds
+    </script>
+  </body>
+</html>

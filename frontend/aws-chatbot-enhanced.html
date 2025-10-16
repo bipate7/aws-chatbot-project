@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Chatbot - AWS DynamoDB Enhanced</title>
+    <style>
+      :root {
+        --primary: #007bff;
+        --aws-orange: #ff9900;
+        --aws-green: #28a745;
+        --dynamo-purple: #7b68ee;
+        --dark: #2c3e50;
+        --light: #ecf0f1;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        min-height: 85vh;
+      }
+
+      /* Sidebar Styles */
+      .sidebar {
+        background: var(--dark);
+        color: white;
+        padding: 30px 20px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .logo {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .logo h1 {
+        font-size: 1.5em;
+        margin-bottom: 5px;
+      }
+
+      .aws-badge {
+        background: var(--aws-orange);
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+
+      .session-info {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .session-info h3 {
+        margin-bottom: 10px;
+        color: var(--aws-orange);
+      }
+
+      .features-list {
+        flex: 1;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 15px 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+      }
+
+      /* Main Chat Area */
+      .main-content {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+      }
+
+      .chat-header {
+        background: white;
+        padding: 20px 30px;
+        border-bottom: 2px solid var(--light);
+        text-align: center;
+      }
+
+      .chat-area {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: var(--light);
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .message {
+        max-width: 70%;
+        padding: 15px 20px;
+        border-radius: 20px;
+        animation: slideIn 0.3s ease-out;
+        position: relative;
+      }
+
+      .user-message {
+        background: var(--primary);
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+      }
+
+      .bot-message {
+        background: white;
+        color: var(--dark);
+        border: 2px solid #e0e0e0;
+        border-bottom-left-radius: 5px;
+      }
+
+      .system-message {
+        background: var(--dynamo-purple);
+        color: white;
+        margin: 10px auto;
+        text-align: center;
+        max-width: 80%;
+        font-size: 0.9em;
+      }
+
+      .database-message {
+        background: #f8f9fa;
+        color: var(--dynamo-purple);
+        border: 1px dashed var(--dynamo-purple);
+        font-size: 0.8em;
+        max-width: 60%;
+        margin: 5px auto;
+        padding: 10px 15px;
+      }
+
+      .input-area {
+        padding: 20px 30px;
+        background: white;
+        border-top: 2px solid var(--light);
+        display: flex;
+        gap: 15px;
+        align-items: center;
+      }
+
+      #userInput {
+        flex: 1;
+        padding: 15px 20px;
+        border: 2px solid #e0e0e0;
+        border-radius: 25px;
+        font-size: 16px;
+        outline: none;
+        transition: border-color 0.3s;
+      }
+
+      #userInput:focus {
+        border-color: var(--primary);
+      }
+
+      button {
+        background: linear-gradient(135deg, var(--primary), #0056b3);
+        color: white;
+        border: none;
+        padding: 15px 25px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+      }
+
+      .suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 15px 30px;
+        background: #f8f9fa;
+        border-top: 1px solid #e0e0e0;
+      }
+
+      .suggestion {
+        background: white;
+        border: 2px solid var(--primary);
+        border-radius: 20px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+        color: var(--primary);
+      }
+
+      .suggestion:hover {
+        background: var(--primary);
+        color: white;
+      }
+
+      .database-suggestion {
+        border-color: var(--dynamo-purple);
+        color: var(--dynamo-purple);
+      }
+
+      .database-suggestion:hover {
+        background: var(--dynamo-purple);
+        color: white;
+      }
+
+      .typing {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 15px;
+        color: #666;
+        font-style: italic;
+      }
+
+      .typing-dots {
+        display: flex;
+        gap: 4px;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        background: #666;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%,
+        60%,
+        100% {
+          transform: translateY(0);
+        }
+        30% {
+          transform: translateY(-10px);
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .timestamp {
+        font-size: 0.7em;
+        opacity: 0.7;
+        margin-top: 5px;
+      }
+
+      .metrics {
+        display: flex;
+        gap: 15px;
+        padding: 10px 30px;
+        background: var(--dark);
+        color: white;
+        font-size: 12px;
+      }
+
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="logo">
+          <h1>🤖 AWS Chatbot</h1>
+          <div class="aws-badge">DynamoDB Enhanced</div>
+        </div>
+
+        <div class="session-info">
+          <h3>🔐 Session Info</h3>
+          <div id="sessionId">Loading...</div>
+          <div id="userId">Loading...</div>
+        </div>
+
+        <div class="features-list">
+          <h3>🚀 Week 2 Features</h3>
+          <div class="feature-item">✅ Persistent Chat History</div>
+          <div class="feature-item">✅ User Session Management</div>
+          <div class="feature-item">✅ Database Analytics</div>
+          <div class="feature-item">✅ Message TTL (Auto-cleanup)</div>
+          <div class="feature-item">✅ Conversation Recovery</div>
+          <div class="feature-item">✅ Multi-table Architecture</div>
+        </div>
+
+        <div style="margin-top: auto">
+          <button
+            onclick="clearSession()"
+            style="background: var(--dynamo-purple); width: 100%"
+          >
+            🔄 New Session
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+        <div class="chat-header">
+          <h2>💬 AI Customer Service</h2>
+          <p>Now with AWS DynamoDB persistence</p>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+          <div class="system-message">💾 Connecting to AWS DynamoDB...</div>
+        </div>
+
+        <div class="suggestions">
+          <div
+            class="suggestion"
+            onclick="askQuestion('Tell me about shipping')"
+          >
+            🚚 Shipping
+          </div>
+          <div
+            class="suggestion"
+            onclick="askQuestion('What is your return policy?')"
+          >
+            📦 Returns
+          </div>
+          <div
+            class="suggestion database-suggestion"
+            onclick="askQuestion('How does the database work?')"
+          >
+            💾 Database
+          </div>
+          <div
+            class="suggestion database-suggestion"
+            onclick="askQuestion('Show my chat history')"
+          >
+            📝 History
+          </div>
+          <div class="suggestion" onclick="askQuestion('Payment methods')">
+            💳 Payments
+          </div>
+          <div
+            class="suggestion database-suggestion"
+            onclick="askQuestion('Session information')"
+          >
+            🔐 Session
+          </div>
+        </div>
+
+        <div class="input-area">
+          <input
+            type="text"
+            id="userInput"
+            placeholder="Ask about DynamoDB, shipping, returns, or anything..."
+            autocomplete="off"
+          />
+          <button onclick="sendMessage()" id="sendButton">
+            <span>📨</span> Send to AWS
+          </button>
+        </div>
+
+        <div class="metrics">
+          <div class="metric" id="messageCount">💬 Messages: 0</div>
+          <div class="metric" id="responseTime">⏱️ Response: -- ms</div>
+          <div class="metric" id="confidenceScore">🎯 Confidence: --%</div>
+          <div class="metric" id="dbStatus">💾 DB: Connecting...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Configuration
+      const AWS_API_URL =
+        "https://ajo8nndd4c.execute-api.us-east-1.amazonaws.com/prod/chat";
+      let currentSessionId = null;
+      let currentUserId = null;
+      let messageCount = 0;
+
+      // Initialize
+      window.onload = function () {
+        initializeSession();
+        document.getElementById("userInput").focus();
+      };
+
+      // Session Management
+      function initializeSession() {
+        // Generate or retrieve session ID
+        currentSessionId = localStorage.getItem("awsChatbotSessionId");
+        currentUserId = localStorage.getItem("awsChatbotUserId");
+
+        if (!currentSessionId) {
+          currentSessionId = generateSessionId();
+          localStorage.setItem("awsChatbotSessionId", currentSessionId);
+        }
+
+        if (!currentUserId) {
+          currentUserId = generateUserId();
+          localStorage.setItem("awsChatbotUserId", currentUserId);
+        }
+
+        // Update UI
+        document.getElementById(
+          "sessionId"
+        ).textContent = `Session: ${currentSessionId.substring(0, 15)}...`;
+        document.getElementById(
+          "userId"
+        ).textContent = `User: ${currentUserId}`;
+
+        // Test database connection
+        testDatabaseConnection();
+      }
+
+      function generateSessionId() {
+        return (
+          "session-" +
+          Date.now() +
+          "-" +
+          Math.random().toString(36).substr(2, 9)
+        );
+      }
+
+      function generateUserId() {
+        return "user-" + Math.random().toString(36).substr(2, 9);
+      }
+
+      function clearSession() {
+        localStorage.removeItem("awsChatbotSessionId");
+        localStorage.removeItem("awsChatbotUserId");
+        document.getElementById("chatArea").innerHTML =
+          '<div class="system-message">🔄 Starting new session...</div>';
+        messageCount = 0;
+        updateMetric("messageCount", 0);
+        initializeSession();
+      }
+
+      // Database Connection Test
+      async function testDatabaseConnection() {
+        try {
+          const response = await fetch(AWS_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "session-id": currentSessionId,
+              "user-id": currentUserId,
+            },
+            body: JSON.stringify({ message: "connection_test" }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            document.getElementById("dbStatus").textContent =
+              "💾 DB: Connected";
+            document.getElementById("chatArea").innerHTML = `
+                        <div class="system-message">
+                            ✅ Connected to AWS DynamoDB! Chat history is now persistent.
+                        </div>
+                        <div class="database-message">
+                            💾 Tables: ${
+                              data.database?.table || "ai-chatbot-sessions"
+                            } | Features: ${
+              data.database?.features?.join(", ") || "Persistent storage"
+            }
+                        </div>
+                    `;
+          }
+        } catch (error) {
+          document.getElementById("dbStatus").textContent = "💾 DB: Offline";
+        }
+      }
+
+      // Enhanced Message Sending
+      async function sendMessage() {
+        const userInput = document.getElementById("userInput");
+        const message = userInput.value.trim();
+        const sendButton = document.getElementById("sendButton");
+
+        if (!message) return;
+
+        // UI Updates
+        sendButton.disabled = true;
+        sendButton.innerHTML = "<span>⏳</span> Processing...";
+        addMessage(message, "user");
+        userInput.value = "";
+        showTyping();
+
+        try {
+          const startTime = Date.now();
+
+          const response = await fetch(AWS_API_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "session-id": currentSessionId,
+              "user-id": currentUserId,
+            },
+            body: JSON.stringify({ message: message }),
+          });
+
+          const responseTime = Date.now() - startTime;
+
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const data = await response.json();
+
+          hideTyping();
+          addMessage(data.message, "bot");
+
+          // Add database info
+          if (data.database) {
+            addMessage(
+              `💾 DynamoDB: ${data.conversationLength} messages stored | Table: ${data.database.table}`,
+              "database-message"
+            );
+          }
+
+          // Update metrics
+          messageCount = data.conversationLength || messageCount + 1;
+          updateMetric("messageCount", messageCount);
+          updateMetric("responseTime", `${responseTime}ms`);
+          updateMetric("confidenceScore", `${data.confidence}%`);
+        } catch (error) {
+          hideTyping();
+          addMessage(
+            "❌ Database connection issue. Using fallback mode.",
+            "bot"
+          );
+          console.error("Send error:", error);
+        } finally {
+          sendButton.disabled = false;
+          sendButton.innerHTML = "<span>📨</span> Send to AWS";
+        }
+      }
+
+      // UI Functions
+      function askQuestion(question) {
+        document.getElementById("userInput").value = question;
+        sendMessage();
+      }
+
+      function addMessage(text, type) {
+        const chatArea = document.getElementById("chatArea");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = text;
+
+        // Add timestamp for user/bot messages
+        if (type === "user-message" || type === "bot-message") {
+          const timestamp = document.createElement("div");
+          timestamp.className = "timestamp";
+          timestamp.textContent = new Date().toLocaleTimeString();
+          messageDiv.appendChild(timestamp);
+        }
+
+        chatArea.appendChild(messageDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function showTyping() {
+        const chatArea = document.getElementById("chatArea");
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "typing";
+        typingDiv.innerHTML = `
+                💾 AWS DynamoDB processing
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+        chatArea.appendChild(typingDiv);
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+
+      function hideTyping() {
+        const typingIndicator = document.querySelector(".typing");
+        if (typingIndicator) typingIndicator.remove();
+      }
+
+      function updateMetric(metricId, value) {
+        const metricElement = document.getElementById(metricId);
+        if (metricElement) {
+          const parts = metricElement.textContent.split(":");
+          metricElement.textContent = `${parts[0]}: ${value}`;
+        }
+      }
+
+      // Enter key support
+      document
+        .getElementById("userInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            sendMessage();
+          }
+        });
+    </script>
+  </body>
+</html>
