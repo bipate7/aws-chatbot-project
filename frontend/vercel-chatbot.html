@@ -1,37 +1,502 @@
-{
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "frontend/**/*.html",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/",
-      "dest": "/frontend/vercel-chatbot.html"
-    },
-    {
-      "src": "/chat",
-      "dest": "/frontend/vercel-chatbot.html"
-    },
-    {
-      "src": "/api/chat",
-      "methods": ["POST", "OPTIONS"],
-      "dest": "/api/chat.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    }
-  ],
-  "functions": {
-    "api/chat.js": {
-      "maxDuration": 10
-    }
-  }
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot - Vercel Free Tier</title>
+    <style>
+        :root {
+            --vercel-black: #000000;
+            --vercel-purple: #7928CA;
+            --vercel-pink: #FF0080;
+            --success: #0070F3;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            min-height: 80vh;
+        }
+
+        .header {
+            background: var(--vercel-black);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .vercel-badge {
+            background: linear-gradient(135deg, var(--vercel-purple), var(--vercel-pink));
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-left: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        .free-badge {
+            background: var(--success);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
+        .chat-area {
+            height: 400px;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .user-message {
+            background: var(--vercel-black);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            background: white;
+            color: var(--vercel-black);
+            border: 2px solid #e0e0e0;
+            border-bottom-left-radius: 5px;
+        }
+
+        .system-message {
+            background: var(--vercel-purple);
+            color: white;
+            margin: 0 auto;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 2px solid #f0f0f0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #userInput:focus {
+            border-color: var(--vercel-purple);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--vercel-purple), var(--vercel-pink));
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .suggestion {
+            background: white;
+            border: 2px solid var(--vercel-purple);
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            color: var(--vercel-purple);
+        }
+
+        .suggestion:hover {
+            background: var(--vercel-purple);
+            color: white;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 20px;
+            background: var(--vercel-black);
+            color: white;
+            font-size: 14px;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #666;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+
+        .provider-comparison {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .provider {
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .aws-provider {
+            background: #FF9900;
+            color: white;
+        }
+
+        .vercel-provider {
+            background: #000000;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                🤖 AI Customer Service
+                <span class="vercel-badge">▲ Vercel</span>
+            </h1>
+            <p>Free Forever - No Credit Card Required</p>
+            <div class="free-badge">$0/Month</div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            <div class="message system-message">
+                🚀 Welcome to Vercel Free Tier! This costs $0/month forever.
+            </div>
+            <div class="message bot-message">
+                🤖 Hello! I'm running on Vercel serverless functions. Try asking about Vercel, free tier, or anything else!
+            </div>
+        </div>
+
+        <div class="suggestions">
+            <div class="suggestion" onclick="askQuestion('Tell me about Vercel')">▲ Vercel</div>
+            <div class="suggestion" onclick="askQuestion('Is this really free?')">🎉 Free Tier</div>
+            <div class="suggestion" onclick="askQuestion('Shipping information')">🚚 Shipping</div>
+            <div class="suggestion" onclick="askQuestion('Return policy')">📦 Returns</div>
+            <div class="suggestion" onclick="askQuestion('Payment methods')">💳 Payments</div>
+            <div class="suggestion" onclick="askQuestion('Compare AWS vs Vercel')">⚡ Compare</div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask about Vercel, free tier, or anything..." autocomplete="off">
+            <button onclick="sendMessage()" id="sendButton">
+                📨 Send to Vercel
+            </button>
+        </div>
+
+        <div class="provider-comparison">
+            <div style="text-align: center; margin-bottom: 10px; font-weight: bold;">⚡ Platform Comparison</div>
+            <div class="comparison-grid">
+                <div class="provider aws-provider">
+                    <div>AWS</div>
+                    <small>$1-5/month</small>
+                </div>
+                <div class="provider vercel-provider">
+                    <div>Vercel</div>
+                    <small>$0/month</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div id="status">✅ Connected to Vercel</div>
+            <div>💰 Cost: $0/month</div>
+        </div>
+    </div>
+
+    <script>
+        // Vercel API endpoint - will work when deployed to Vercel
+        const VERCEL_API = '/api/chat';
+        
+        // For local testing before deployment
+        const LOCAL_API = 'http://localhost:3000/api/chat';
+        
+        let currentApi = VERCEL_API;
+        let messageCount = 0;
+
+        // Initialize
+        window.onload = function() {
+            document.getElementById('userInput').focus();
+            testVercelConnection();
+            updateMessageCount();
+        };
+
+        // Test Vercel connection
+        async function testVercelConnection() {
+            const statusElement = document.getElementById('status');
+            try {
+                const response = await fetch(currentApi, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: 'test' })
+                });
+                
+                if (response.ok) {
+                    statusElement.textContent = '✅ Connected to Vercel';
+                    statusElement.style.color = 'white';
+                }
+            } catch (error) {
+                statusElement.textContent = '⚠️ Vercel: Connect when deployed';
+                statusElement.style.color = '#ffcc00';
+                console.log('Vercel connection will work after deployment');
+            }
+        }
+
+        // Send message to Vercel
+        async function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const message = userInput.value.trim();
+            const sendButton = document.getElementById('sendButton');
+
+            if (!message) return;
+
+            // UI updates
+            sendButton.disabled = true;
+            sendButton.textContent = '⏳ Processing...';
+            addMessage(message, 'user-message');
+            userInput.value = '';
+            messageCount++;
+            updateMessageCount();
+            showTyping();
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch(currentApi, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'session-id': generateSessionId(),
+                        'user-id': 'vercel-user-' + Date.now()
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const responseTime = Date.now() - startTime;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                hideTyping();
+                addMessage(data.message, 'bot-message');
+                
+                // Add platform info
+                addMessage(`▲ ${data.platform} | Confidence: ${data.confidence}% | Time: ${responseTime}ms`, 'system-message');
+
+                // Update status
+                document.getElementById('status').textContent = `✅ Vercel (${responseTime}ms)`;
+
+            } catch (error) {
+                hideTyping();
+                
+                // Fallback responses when not deployed yet
+                const fallbackResponse = getFallbackResponse(message);
+                addMessage(fallbackResponse, 'bot-message');
+                addMessage('🔧 Local Mode | Deploy to Vercel for live API', 'system-message');
+                
+                document.getElementById('status').textContent = '🔧 Local Mode';
+                console.error('API Error (normal before deployment):', error);
+            } finally {
+                sendButton.disabled = false;
+                sendButton.textContent = '📨 Send to Vercel';
+            }
+        }
+
+        // Fallback responses for local testing
+        function getFallbackResponse(message) {
+            const fallbackResponses = {
+                'vercel': '▲ **Vercel**: Free hosting platform! Deploy this chatbot to Vercel for $0/month.',
+                'free': '🎉 **Free Forever**: Vercel offers free hosting with serverless functions. Perfect for projects!',
+                'shipping': '🚚 **Shipping**: Free delivery on orders over $50! (This will connect to live API when deployed)',
+                'return': '📦 **Returns**: 30-day return policy. Deploy to Vercel to enable database features.',
+                'payment': '💳 **Payments**: All major cards accepted. Vercel deployment required for live processing.',
+                'aws': '☁️ **AWS vs Vercel**: AWS costs money, Vercel is free! Both are great cloud platforms.',
+                'compare': '⚡ **Comparison**: AWS: $1-5/month, Vercel: $0/month. Vercel is perfect for personal projects!',
+                'default': '🤖 **Local Preview**: This is a preview! Deploy to Vercel for live AI responses and database features.'
+            };
+            
+            const lowerMessage = message.toLowerCase();
+            for (const [keyword, response] of Object.entries(fallbackResponses)) {
+                if (lowerMessage.includes(keyword)) {
+                    return response;
+                }
+            }
+            return fallbackResponses.default;
+        }
+
+        // UI functions
+        function askQuestion(question) {
+            document.getElementById('userInput').value = question;
+            sendMessage();
+        }
+
+        function addMessage(text, type) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function showTyping() {
+            const chatArea = document.getElementById('chatArea');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing';
+            typingDiv.innerHTML = `
+                Vercel is processing...
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            chatArea.appendChild(typingDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.querySelector('.typing');
+            if (typing) typing.remove();
+        }
+
+        function generateSessionId() {
+            return 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+        }
+
+        function updateMessageCount() {
+            const messageCountElement = document.querySelector('.status-bar div:nth-child(2)');
+            if (messageCountElement) {
+                messageCountElement.textContent = `💬 Messages: ${messageCount}`;
+            }
+        }
+
+        // Enter key support
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Demo mode for local testing
+        function enableDemoMode() {
+            currentApi = LOCAL_API;
+            document.getElementById('status').textContent = '🔧 Demo Mode Enabled';
+            addMessage('🔧 Demo mode enabled for local testing', 'system-message');
+        }
+
+        // Auto-focus on input
+        setInterval(() => {
+            document.getElementById('userInput').focus();
+        }, 1000);
+    </script>
+</body>
+</html>
